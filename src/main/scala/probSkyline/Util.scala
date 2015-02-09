@@ -36,6 +36,21 @@ object Util{
 		itemList
 	}
 
+	import org.apache.spark.rdd.RDD
+	def getItemListFromRDD(iterInst: RDD[Instance]) = {
+		var aMap = new HashMap[Integer, Item]();
+		for(curr <- iterInst){
+
+			if(!aMap.contains(curr.objID)){
+				val aItem = new Item(curr.objID);              
+				aMap.update(curr.objID, aItem);
+			}
+			aMap(curr.objID).addInstance(curr);
+		}
+		val itemList = aMap.values.toList
+		itemList
+	}
+
 
 	/*
 	 * get the whole map data[Int, item], filter objects whose item is still in 
@@ -56,6 +71,19 @@ object Util{
 		aMap
 	}
 
+	def getItemMapFromIterable(iterInst: Iterable[Instance]) = {
+
+		var aMap = new HashMap[Integer, Item]();
+		for(curr <- iterInst){
+
+			if(!aMap.contains(curr.objID)){
+				val aItem = new Item(curr.objID);              
+				aMap.update(curr.objID, aItem);
+			}
+			aMap(curr.objID).addInstance(curr);
+		}
+		aMap
+	}
 
 	/*
 	 * given a string, stringToInstance creates an instance.

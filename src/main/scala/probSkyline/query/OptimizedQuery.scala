@@ -111,3 +111,55 @@ class OptimizedQuery(var area: String, val itemMap: HashMap[Integer, Item]){
 		wrTree.run();
 	}
 }
+
+class OptimizedQuerySpark(var area: Int, val itemMap: HashMap[Integer, Item], outputLists: ListBuffer[PartitionInfo]){
+	
+	var cleanItemMap = new HashMap[Integer, Item]();
+
+	/*
+	 * compProb is target to use optimized way to compute probability
+	 * of objects.
+	 */
+	def compProb(){
+		rule1();
+		rule2();
+		rule3();
+	}
+
+	def rule1(){
+		if(outputLists != null){
+			val areaInfo = outputLists(area);
+			for( (idMax, ptMax) <- areaInfo.max ){
+				if(itemMap(idMax).potentialSkyline == true){
+					for{
+						(idMin, ptMin) <- areaInfo.min
+						if idMin != idMax 
+						if itemMap(idMin).potentialSkyline == true
+						if ptMax.checkDomination(ptMin) == true
+					}itemMap(idMin).potentialSkyline = false;
+				}
+			}
+	  }
+	  removeAndGenerateNewList();
+	}
+
+	def removeAndGenerateNewList(){
+//		println("before prune 1, the size of objects is " + itemMap.size);
+		for( (objID, item) <- itemMap if item.potentialSkyline == true)
+			cleanItemMap += objID -> item;
+		println("after removing redundant items, the size decreases to " + cleanItemMap.size);
+	}
+
+	def rule2(){
+		for( (objID, item)<- cleanItemMap; instance<- item.instances){
+			for( (idMax, ptMax) <- outputLists(area).max  
+				   if ptMax.checkDomination(instance.pt) == true
+				 )instance.instPotentialSkyline = true;
+		}
+	}
+
+	def rule3(){
+		val wrTree = new WRTree(cleanItemMap, "area");
+		wrTree.run();
+	}
+}
