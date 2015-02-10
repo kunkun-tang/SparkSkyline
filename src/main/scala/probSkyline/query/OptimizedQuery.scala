@@ -107,8 +107,8 @@ class OptimizedQuery(var area: String, val itemMap: HashMap[Integer, Item]){
 	}
 
 	def rule3(){
-		val wrTree = new WRTree(cleanItemMap, area);
-		wrTree.run();
+		// val wrTree = new WRTree(cleanItemMap, area);
+		// wrTree.run();
 	}
 }
 
@@ -120,10 +120,16 @@ class OptimizedQuerySpark(var area: Int, val itemMap: HashMap[Integer, Item], ou
 	 * compProb is target to use optimized way to compute probability
 	 * of objects.
 	 */
-	def compProb(){
+	def compProb() = {
 		rule1();
-		rule2();
-		rule3();
+		val newInstList = rule2();
+
+		/*
+		 * canObjs is a list including all objs which meets the requirement.
+		 * cleanItemMap includes all affecting instances.
+		 */
+		val candObjs = rule3(newInstList);
+		(newInstList.map(x=>x.instID), candObjs)
 	}
 
 	def rule1(){
@@ -143,23 +149,24 @@ class OptimizedQuerySpark(var area: Int, val itemMap: HashMap[Integer, Item], ou
 	  removeAndGenerateNewList();
 	}
 
-	def removeAndGenerateNewList(){
+	def removeAndGenerateNewList() = {
 //		println("before prune 1, the size of objects is " + itemMap.size);
 		for( (objID, item) <- itemMap if item.potentialSkyline == true)
 			cleanItemMap += objID -> item;
 		println("after removing redundant items, the size decreases to " + cleanItemMap.size);
 	}
 
-	def rule2(){
+	def rule2()={
 		for( (objID, item)<- cleanItemMap; instance<- item.instances){
 			for( (idMax, ptMax) <- outputLists(area).max  
 				   if ptMax.checkDomination(instance.pt) == true
 				 )instance.instPotentialSkyline = true;
 		}
+		cleanItemMap.values.flatMap(x => x.instances).toList
 	}
 
-	def rule3(){
-		val wrTree = new WRTree(cleanItemMap, "area");
+	def rule3(instList: List[Instance]) = {
+		val wrTree = new WRTree(instList, "area");
 		wrTree.run();
 	}
 }

@@ -29,10 +29,17 @@ class Point(val dim: Int) extends Serializable{
 
 	def apply(i: Int) = coordinates(i)
 
+	def update(i: Int, value: Double) = coordinates(i) = value
+
+
 	def setOffsetValue(onePoint: Point, currDim: Int, offset: Double){
 		coordinates(currDim) = onePoint(currDim) + offset
 	}
 
+	/*
+	 * if self dominates onePoint, returns true;
+	 * if not, return false.
+	 */
 	def checkDomination(onePoint: Point) = {
 		var ret = true;
 		for(i<- 0 until dim if coordinates(i) >= onePoint(i) ) ret = false; 

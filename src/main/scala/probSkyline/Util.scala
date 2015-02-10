@@ -106,6 +106,37 @@ object Util{
 		arrRet
 	}
 
+
+	class GenQuantilePartition(val total: Int, var numPart: Int) extends Serializable{
+		import scala.collection.mutable.ListBuffer;
+		
+		/*
+		 * if the total is 7, numPart is 4.
+		 * the list will be (1, 2, 2, 2)
+		 */
+		val partList = {
+			var totalCopy = total;
+			var list = new ListBuffer[Int]();
+			while(totalCopy > 0 && numPart > 0){
+				val curr: Int = totalCopy/numPart;
+				list += curr;
+				totalCopy -= curr;
+				numPart -= 1;
+			}
+			list.scanLeft(0)(_ + _).drop(1)
+		}
+
+		def genPart(index: Int) = {
+			// println("index = "+index + "  total = "+total)
+			if(index >= total) throw new Exception("index can not be larger then total number")
+			var part = 0;
+			while(index >= partList(part)){
+				part += 1
+			}
+			part
+		}
+	}
+
 	/*
 	 * Given an instance, getPartition finds the partition number for the 
 	 * instance.

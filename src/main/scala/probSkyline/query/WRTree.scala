@@ -3,8 +3,8 @@ package probSkyline.query
 import probSkyline.Util;
 import probSkyline.dataStructure._;
 import probSkyline.IO._
-import scala.util.Random
 
+import scala.util.Random
 import java.io.IOException;
 import scala.collection.mutable.HashSet;
 import scala.collection.mutable.ListBuffer;
@@ -16,11 +16,10 @@ import xxl.core.spatial.rectangles.DoublePointRectangle;
 import scala.collection.JavaConversions.mapAsScalaMap;
 import xxl.core.spatial.points.DoublePoint;
 
-class WRTree(val cleanItemMap: HashMap[Integer, Item], val testArea: String){
+class WRTree(val instList: List[Instance], val testArea: String){
 
 	import WRTree._
 
-	val instList = cleanItemMap.values.flatMap(x => x.instances).toList;
  	val rand = new Random(System.currentTimeMillis());
 
  	// Origin is the (0,0) origin in the x-y axis.
@@ -126,7 +125,7 @@ class WRTree(val cleanItemMap: HashMap[Integer, Item], val testArea: String){
   }
 
 
-	def collectInfo(){
+	def collectInfo() = {
 
 		instList.foreach{ inst => {
 			val pt = new DoublePoint(inst.pt.coordinates);
@@ -156,6 +155,17 @@ class WRTree(val cleanItemMap: HashMap[Integer, Item], val testArea: String){
 			inst.instSkyProb = multiplyMap(inst, aggregateMap);
 			// println("inst prob = " + inst.instSkyProb)
 		}}
+
+		/*
+		 * collect every item's prob value, 
+		 * and check if the value is larger than the predefiend lower bound of prob
+		 * if it does, yield candidate objdID to a list, and return to sparkApp.
+		 */
+		val map = Util.getItemMapFromIterable(instList);
+		for{
+			(k,v) <- map;
+			if v.instances.foldLeft(0.0)((prob, inst)=> prob + inst.prob*inst.instSkyProb) > lowerBoundProb
+		}yield k
 
 	}
 
@@ -196,7 +206,7 @@ class WRTree(val cleanItemMap: HashMap[Integer, Item], val testArea: String){
 		ret;
 	}
 
-	def run(){
+	def run() = {
 		init();
 		collectInfo();
 	}
@@ -209,7 +219,8 @@ object WRTree{
 	def folderName = conf.getString("Query.partFolder");
 	def dim = conf.getInt("Query.dim");
 	def numPivot = conf.getInt("Query.numPivot");
-	
+	def lowerBoundProb = conf.getDouble("Query.lowerBoundProb");
+
 	def checkDomination(pt1: Array[Double], pt2: Array[Double]): Boolean={
 		var ret = true;
 		for(i <- 0 until pt1.length)
