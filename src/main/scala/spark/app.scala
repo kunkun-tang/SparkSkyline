@@ -9,7 +9,7 @@ import com.typesafe.config.ConfigFactory
 import probSkyline.Util;
 import probSkyline.dataStructure._;
 import probSkyline.genData.SplitData;
-import probSkyline.query.OptimizedQuerySpark;
+import probSkyline.query._;
 
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.HashMap
@@ -45,6 +45,7 @@ object SparkApp {
     val srcFile = config.getString("Query.srcFile") // Should be some file on your system
     val numMapper = config.getInt("Query.splitNum")
     val dim = config.getInt("Query.dim");
+    val lowerBoundProb = config.getDouble("Query.lowerBoundProb");
 
 
     val conf = new SparkConf().setAppName("Simple Application")
@@ -141,12 +142,30 @@ object SparkApp {
 
     /*
      * The finalPartition's format will be [( (partID, List(partID, instance)),  (partID, List((Instance, Index))) )]
+     * using zip to make instances with the same partition ID are grouped together.
      */
     val finalPartition = partInflInsts.zip(partObjInsts)
+    // finalPartition.foreach{case (infPart, candPart)=> println(" infPart No.="+ infPart._1 + " candPart No.=" + candPart._1)}
 
-    finalPartition.foreach{case (infPart, candPart)=> println(" infPart No.="+ infPart._1 + " candPart No.=" + candPart._1)}
 
+    /*
+     *----finalPartition => [Iterable[instance]] => [(objID, Iterable[Instance])] => [ (objID, objSkyProb)]
+     */
+    val allCandSkyProb = finalPartition.flatMap{case (infPart, candPart)=> {
 
+      val secPhase = new SecondPhaseQuerySpark(infPart._2.map(_._2), candPart._2.map(_._1))
+      secPhase.compProb();
+    }}.groupBy(inst => inst.objID).map{
+
+      case (objID, iterable)=> (objID, iterable.foldLeft(0.0)( (acc, inst) => acc+inst.prob*inst.instSkyProb))
+    }
+
+    /*
+     * filter all required candidate objects whose skyProb is larger then bound
+     */
+    val finalObjSkyProb = allCandSkyProb.filter(_._2 > lowerBoundProb)
+
+    println(" obj num = "+ finalObjSkyProb.count)
     // println(individual.count());
     // val numAs = logData.filter(line => line.contains("a")).count()
     // val numBs = logData.filter(line => line.contains("b")).count()
