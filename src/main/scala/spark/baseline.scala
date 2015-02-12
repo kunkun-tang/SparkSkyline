@@ -19,7 +19,7 @@ import org.apache.log4j.LogManager
 import org.apache.log4j.Level
 import org.apache.log4j.PropertyConfigurator
  
-object SparkApp {
+object BaselineApp {
 
     var startTime = 0L
     def start(){
@@ -95,7 +95,7 @@ object SparkApp {
     val (inflInsts, candObjs) = individual.map(part => {
     	val itemMap = Util.getItemMapFromIterable(part._2);
 
-    	val firstPhaseQuery = new OptimizedQuerySpark(part._1, itemMap, outputLists);
+    	val firstPhaseQuery = new NaiveQuerySpark(part._1, itemMap, outputLists);
       firstPhaseQuery.compProb();
     }).reduce((pair1, pair2) => (pair1._1 ++ pair2._1,  pair1._2 ++ pair2._2))
 
