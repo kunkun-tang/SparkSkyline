@@ -37,18 +37,18 @@ object Util{
 	}
 
 	import org.apache.spark.rdd.RDD
-	def getItemListFromRDD(iterInst: RDD[Instance]) = {
+	def getItemListFromRDD(iterInst: Array[Instance]) = {
 		var aMap = new HashMap[Integer, Item]();
 		for(curr <- iterInst){
-
 			if(!aMap.contains(curr.objID)){
-				val aItem = new Item(curr.objID);              
+				val aItem = new Item(curr.objID);
 				aMap.update(curr.objID, aItem);
 			}
+			val newCurr = new Instance(curr.objID, curr.instID, curr.prob, curr.dim);
+			newCurr.setPoint(curr.pt)
 			aMap(curr.objID).addInstance(curr);
 		}
-		val itemList = aMap.values.toList
-		itemList
+		aMap.values.toList
 	}
 
 
@@ -194,6 +194,10 @@ object Util{
 					ret = partitionY * anglesX.length + partitionX;
 				}
 			}
+			else if(dim == 8){
+
+
+			}
 		}
 		ret;
 	}
@@ -227,6 +231,98 @@ object Util{
 		}
 		retList
 	}
+
+  def newComputeArrDouble() = {
+		val splitNum = conf.getInt("Query.splitNum");
+
+		val retList = new ListBuffer[ListBuffer[Double]](); 
+		if(dim == 2){
+			val arr = new ListBuffer[Double](); 
+			for(i<-0 until splitNum) 
+				arr.append(math.Pi/2/splitNum*(i+1));
+			
+			retList.append(arr);
+		}
+		else if (dim > 2){
+			val arr = new ListBuffer[Double]();
+			arr.append(0.7854); //45 degree 1.0472
+			arr.append(1.5708); //90 degree
+			retList.append(arr);
+
+			val arr2 = new ListBuffer[Double]();
+			arr2.append(1.0472);	//60 degree cos(60) = 0.5
+			arr2.append(1.5708);	//90 degree cos(90) = 0.0
+			retList.append(arr2);
+		}
+		retList
+	}
+
+	val newArrDouble = newComputeArrDouble();
+
+	def newGetPartition(aInst: Instance) = {
+		var ret = -1;
+		if(aInst != null){
+
+			/*
+			 * compute the length of the radius firstly.
+			 */
+			var r = 0.0;
+			for(i<- 0 until dim)
+				r += aInst.pt(i) * aInst.pt(i);
+
+			/*
+			 * Detailed computation procedure could be referred in Angle-based Space Partitioning for Efficient Parallel
+			 * Skyline Computation.
+			 */
+			var angle = new Array[Double](dim-1)
+			for(i<-0 until angle.length){
+				r -= aInst.pt(i) * aInst.pt(i);
+				val tanPhi = math.sqrt(r)/aInst.pt(i);
+				angle(i) = math.atan(tanPhi);	
+			}
+
+			/* 
+			 * Current partitioning scheme only supports two and three dimensional cases.
+			 * if the returned value is -1, it denotes that sth wrong happened in the get partition number Process.
+			 */
+			if(dim == 2){
+				val angles = newArrDouble(0);
+				for(i<-(0 until angles.length).reverse)
+				  if (angles(i) > angle(0)) ret = i;
+			}
+			else if(dim >2){
+
+				val anglesX = newArrDouble(0);
+				var partitionX = -1;
+
+				for{i<- anglesX.length-1 to (0, -1); if anglesX(i) > angle(0)}
+						partitionX = i;
+
+				val anglesOther = newArrDouble(1);
+				val partitionOtherList = new ListBuffer[Int]();
+				for(index <- 1 until angle.length){
+					var partitionOther = -1;
+					for{i<- anglesOther.length-1 to (0, -1); if anglesOther(i) > angle(index) }{
+							partitionOther = i;
+					}
+					if(partitionOther == -1) ret = -1;
+					else partitionOtherList += partitionOther;
+				}
+				if(partitionX == -1) ret = -1;
+				else{
+					ret = 0; var tempDim = dim;
+					for(part <- partitionOtherList){
+						// println(part + " "+ math.pow(2, tempDim-2).toInt)
+						ret += part * math.pow(2, tempDim-2).toInt;
+						tempDim -= 1;
+					}
+					ret += partitionX
+				}
+			}
+		}
+		ret;
+	}
+
 
 import java.lang.Object;
 import java.io.ByteArrayOutputStream;

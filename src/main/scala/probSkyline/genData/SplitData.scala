@@ -57,7 +57,7 @@ object SplitData extends App{
 	/*
 	 * find every item's max and min point through findExteme method.
 	 */
-	for(aItem <- itemList) findExtreme(aItem, outputLists)
+	for(aItem <- itemList) findExtreme(aItem, outputLists, dim)
 	
 	import java.io.FileOutputStream;
 	import java.io.ObjectOutputStream;
@@ -79,26 +79,26 @@ object SplitData extends App{
 	 * the function to compute the min and max extreme value of
 	 * every object.
 	 */
-	def findExtreme(aItem: Item, outputList: ListBuffer[PartitionInfo]){
+	def findExtreme(aItem: Item, outputList: ListBuffer[PartitionInfo], dim: Int){
 
 		val areaSet = new HashSet[Int]
-		var min= new Point(SplitData.dim)
+		var min= new Point(dim)
 		min.setOneValue(1.0)
-		var max= new Point(SplitData.dim)
+		var max= new Point(dim)
 		max.setOneValue(0.0)
 
 		for(aInstance <- aItem.instances)
-			for(j<-0 until SplitData.dim){
+			for(j<-0 until dim){
 
 				if(aInstance.pt(j) < min(j))
 					min.coordinates(j) = aInstance.pt(j);
 
 				if(aInstance.pt(j) > max(j))
 					max.coordinates(j) = aInstance.pt(j);
-			}
-
+		}
+		
 		for(aInst <- aItem.instances){
-			val area = Util.getPartition(aInst);
+			val area = Util.newGetPartition(aInst);
 			if(!areaSet.contains(area)){
 
 				val aPartInfo = outputList(area);

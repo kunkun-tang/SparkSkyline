@@ -70,19 +70,22 @@ object SparkApp {
      */
   	start();
 
-    val itemList = Util.getItemListFromRDD(instData)
+    val itemList = Util.getItemListFromRDD(instData.collect());
+    println("original itemList length = "+itemList.length)
+    val count = itemList.foldLeft(0)((num, elem) => num + elem.instances.length)
+    println("original instance count = "+count)
   	val outputLists = new ListBuffer[PartitionInfo]();
   	for(i<-0 until numMapper)
   		outputLists.append(new PartitionInfo(i))
-  	for(aItem <- itemList) SplitData.findExtreme(aItem, outputLists)
+  	for(aItem <- itemList) SplitData.findExtreme(aItem, outputLists, dim)
 
     // Group instance by predefined paritioning scheme.
-    val individual = instData.groupBy(inst => Util.getPartition(inst))
+    val individual = instData.groupBy(inst => Util.newGetPartition(inst))
 
     //--------------------test lenth of every partition------------------
-    // individual.foreach(part => {
-    // 	println("part" + part._1 + " num: " + part._2.toList.length)
-    // })
+    individual.foreach(part => {
+    	println("part" + part._1 + " num: " + part._2.toList.length)
+    })
     end("First Phase partition")
 
 

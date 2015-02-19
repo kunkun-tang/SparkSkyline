@@ -17,8 +17,17 @@ class Instance(val objID: Int, val instID: Int, val prob: Double, val dim: Int)e
 		this.pt.setPoint (onePoint)
 	}
 
+	def this(inst: Instance){
+		this(inst.objID, inst.instID, inst.prob, inst.dim);
+		this.pt.setPoint(inst.pt);
+	}
+
 	def setPoint(arr: Array[Double]){
 		pt.setArrValue(arr)
+	}
+
+	def setPoint(that: Point){
+		this.pt.setPoint(that);
 	}
 
 	def sum = pt.sum
@@ -32,7 +41,7 @@ class Item(val objID: Int) extends Serializable{
 	
 	var objSkyProb = 0.0
 	var potentialSkyline = true;
-	val instances = ListBuffer[Instance]()
+	var instances = ListBuffer[Instance]()
 	var min: Point = null
 	var max: Point = null
 
