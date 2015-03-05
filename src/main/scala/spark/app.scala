@@ -63,7 +63,7 @@ object SparkApp {
     // transform every line to instance.
     val instData = srcData.map(line => {
     	// println(line)
-    	Util.stringToInstance(line)}).cache()
+    	Util.stringToInstance(line)})
 
     /*
      * Firstly, it computes the MAX_MIN Info from the original instance list.
@@ -99,7 +99,7 @@ object SparkApp {
     	val itemMap = Util.getItemMapFromIterable(part._2);
 
     	val firstPhaseQuery = new OptimizedQuerySpark(part._1, itemMap, outputLists);
-      firstPhaseQuery.compProb();
+        firstPhaseQuery.compProb();
     }).reduce((pair1, pair2) => (pair1._1 ++ pair2._1,  pair1._2 ++ pair2._2))
 
     /*

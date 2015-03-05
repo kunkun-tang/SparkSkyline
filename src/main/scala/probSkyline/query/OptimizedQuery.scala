@@ -166,7 +166,78 @@ class OptimizedQuerySpark(var area: Int, val itemMap: HashMap[Integer, Item], ou
 	}
 
 	def rule3(instList: List[Instance]) = {
-		val wrTree = new WRTree(instList, "area");
+		val wrTree = new WRTree(instList, area.toString);
 		wrTree.run();
 	}
 }
+
+
+class OptimizedQueryNoWRTreeSpark(var area: Int, val itemMap: HashMap[Integer, Item], outputLists: ListBuffer[PartitionInfo]){
+	
+	var cleanItemMap = new HashMap[Integer, Item]();
+  var startTime = 0L
+  def start(){
+      startTime = System.nanoTime
+  }
+
+  def end(str: String){
+      println(str+ " time: "+(System.nanoTime-startTime)/1e6+"ms")
+  }
+  
+	/*
+	 * compProb is target to use optimized way to compute probability
+	 * of objects.
+	 */
+	def compProb() = {
+		start();
+		rule1();
+		val newInstList = rule2();
+
+		/*
+		 * canObjs is a list including all objs which meets the requirement.
+		 * cleanItemMap includes all affecting instances.
+		 */
+		val candObjs = rule3(newInstList);
+    end("part"+ area.toString  + " the naive query after filtering time: ");
+		(newInstList.map(x=>x.instID), candObjs)
+	}
+
+	def rule1(){
+		if(outputLists != null){
+			val areaInfo = outputLists(area);
+			for( (idMax, ptMax) <- areaInfo.max ){
+				if(itemMap(idMax).potentialSkyline == true){
+					for{
+						(idMin, ptMin) <- areaInfo.min
+						if idMin != idMax 
+						if itemMap(idMin).potentialSkyline == true
+						if ptMax.checkDomination(ptMin) == true
+					}itemMap(idMin).potentialSkyline = false;
+				}
+			}
+	  }
+	  removeAndGenerateNewList();
+	}
+
+	def removeAndGenerateNewList() = {
+//		println("before prune 1, the size of objects is " + itemMap.size);
+		for( (objID, item) <- itemMap if item.potentialSkyline == true)
+			cleanItemMap += objID -> item;
+		println("after removing redundant items, the size decreases to " + cleanItemMap.size);
+	}
+
+	def rule2()={
+		for( (objID, item)<- cleanItemMap; instance<- item.instances){
+			for( (idMax, ptMax) <- outputLists(area).max  
+				   if ptMax.checkDomination(instance.pt) == true
+				 )instance.instPotentialSkyline = true;
+		}
+		cleanItemMap.values.flatMap(x => x.instances).toList
+	}
+
+	def rule3(instList: List[Instance]) = {
+		val query = new MediumQueryNoWRTree(Util.getItemMapFromIterable(instList).values.toList);
+		query.compProb();
+	}
+}
+

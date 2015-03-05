@@ -207,8 +207,15 @@ class WRTree(val instList: List[Instance], val testArea: String){
 	}
 
 	def run() = {
+
+  	start();
 		init();
-		collectInfo();
+		end("part " + testArea + " initialization time: ")
+
+  	start();
+		val result = collectInfo();
+		end("part " + testArea+ " query time: ")
+		result
 	}
 }
 
@@ -230,6 +237,15 @@ object WRTree{
 
 	def checkDomination(pt1: DoublePoint, pt2: DoublePoint): Boolean= 
 		checkDomination(pt1.getPoint().asInstanceOf[Array[Double]], pt2.getPoint().asInstanceOf[Array[Double]]);
+
+  var startTime = 0L
+  def start(){
+      startTime = System.nanoTime
+  }
+
+  def end(str: String){
+      println(str+ " time: "+(System.nanoTime-startTime)/1e6+"ms")
+  }
 }
 
 class RectInfo{
